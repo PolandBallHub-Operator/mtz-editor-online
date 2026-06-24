@@ -1,0 +1,2054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ShowMeThemeEditor - HyperOS/MIUI MTZ Editor</title>
+	<link rel="manifest" href="manifest.json">
+<script>
+if ('serviceWorker' in navigator) {
+	window.addEventListener('load', () => {
+	navigator.serviceWorker.register('sw.js').then(registration => {
+	console.log('ServiceWorker registration successful with scope: ', registration.scope);
+	}, err => {
+	console.log('ServiceWorker registration failed: ', err);
+	}).catch(err => {
+	console.log(err)
+	});
+	});
+}
+</script>
+    
+    
+    
+
+    <!-- Google Fonts & Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+
+    <!-- JSZip for Client-side Packaging -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <style>
+        :root {
+            --accent-primary: #3381FF;
+            --accent-active: #1A5FCC;
+            
+            /* Light Mode Tokens */
+            --bg-base: #F7F7F7;
+            --glass-bg: #FFFFFF;
+            --text-main: #000000;
+            --text-sub: #555555;
+            --bg-secondary: #EEEEEE;
+            
+            --m3-easing: cubic-bezier(0.32, 0.72, 0, 1);
+            --transition-smooth: 0.4s var(--m3-easing);
+            --card-padding: 20px;
+        }
+
+        .dark-mode {
+            /* Dark Mode Tokens */
+            --bg-base: #000000;
+            --glass-bg: #1C1C1E;
+            --text-main: #FFFFFF;
+            --text-sub: #A1A1A6;
+            --bg-secondary: #2C2C2E;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', 'Noto Sans JP', sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            transition: background-color var(--transition-smooth), color var(--transition-smooth);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            touch-action: none;
+        }
+
+        /* --- Scroll Container --- */
+        #app-viewport {
+            height: 100vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+        }
+
+        /* --- Header --- */
+        header {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            height: 72px; padding: 0 24px;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--glass-bg);
+            transition: background-color var(--transition-smooth);
+        }
+        .logo {
+            font-weight: 700; font-size: 20px; letter-spacing: -0.5px;
+            color: var(--text-main);
+            text-align: center;
+        }
+        .theme-toggle {
+            position: absolute; right: 24px;
+            width: 44px; height: 44px; border-radius: 22px;
+            border: none; background: var(--bg-secondary);
+            color: var(--text-main); cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background var(--transition-smooth);
+        }
+
+        /* --- Main Layout --- */
+        main {
+            padding: 96px 20px 140px;
+            max-width: 1000px; margin: 0 auto;
+            min-height: 100%;
+            transition: opacity 0.3s ease, transform 0.3s var(--m3-easing);
+            box-sizing: border-box;
+        }
+
+        /* --- Flat Solid Card --- */
+        .glass-card {
+            background: var(--glass-bg);
+            border-radius: 24px;
+            padding: var(--card-padding);
+            margin-bottom: 16px;
+            box-shadow: none !important;
+            border: none !important;
+            transform-style: flat;
+            transition: background-color var(--transition-smooth);
+        }
+
+        h2 { 
+            font-size: 20px; 
+            margin-top: 0; 
+            margin-bottom: 8px;
+            font-weight: 700; 
+        }
+        h3 {
+            font-size: 16px;
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        p {
+            font-size: 14px;
+            line-height: 1.45;
+            margin-top: 0;
+            margin-bottom: 12px;
+            color: var(--text-sub);
+        }
+
+        /* --- Interaction --- */
+        @keyframes squishy {
+            0% { transform: scale(1, 1); }
+            30% { transform: scale(1.08, 0.92); }
+            50% { transform: scale(0.95, 1.05); }
+            70% { transform: scale(1.02, 0.98); }
+            100% { transform: scale(1, 1); }
+        }
+        .squish-active {
+            animation: squishy 0.4s var(--m3-easing);
+        }
+
+        /* --- Primary Buttons --- */
+        .ai-btn {
+            border: none; outline: none;
+            padding: 12px 24px; border-radius: 14px;
+            font-weight: 600; font-size: 15px;
+            color: white; cursor: pointer;
+            background: var(--accent-primary);
+            transition: transform 0.2s, background-color 0.2s;
+            display: inline-flex; align-items: center; gap: 8px;
+            box-shadow: none;
+        }
+        .ai-btn:hover { transform: scale(1.02); }
+        .ai-btn:active {
+            background: var(--accent-active);
+            transform: scale(0.95);
+        }
+        .ai-btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-main);
+        }
+        .ai-btn-danger {
+            background: #E11D48;
+            color: white;
+        }
+
+        /* --- Inputs --- */
+        .glass-input-wrapper { margin-bottom: 14px; }
+        .glass-input {
+            width: 100%; padding: 14px 18px;
+            border-radius: 14px; border: none;
+            background: var(--bg-secondary);
+            color: var(--text-main); font-size: 15px;
+            box-sizing: border-box; transition: background 0.3s var(--m3-easing);
+        }
+        .glass-input:focus {
+            outline: 2px solid var(--accent-primary);
+        }
+
+        /* --- Toggles --- */
+        .toggle-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 0;
+        }
+        .switch {
+            position: relative; display: inline-block; width: 50px; height: 28px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--bg-secondary);
+            transition: .3s var(--m3-easing);
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute; content: "";
+            height: 20px; width: 20px; left: 4px; bottom: 4px;
+            background: white; transition: .3s var(--m3-easing);
+            border-radius: 50%;
+        }
+        input:checked + .slider { background: var(--accent-primary); }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        /* --- Navigation --- */
+        .nav-container {
+            position: fixed; bottom: 32px; left: 50%;
+            transform: translateX(-50%); z-index: 500;
+        }
+        .nav-rail {
+            display: flex; align-items: center; gap: 8px;
+            background: var(--glass-bg);
+            padding: 6px; border-radius: 32px;
+            box-shadow: none;
+        }
+        .nav-item {
+            width: 52px; height: 52px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; border-radius: 26px; color: var(--text-sub);
+            transition: all 0.3s var(--m3-easing);
+            position: relative;
+        }
+        .nav-item.active {
+            background: var(--accent-primary); color: white;
+            transform: scale(1.05);
+        }
+
+        /* --- View Management --- */
+        .view { display: none; }
+        .view.active { display: block; animation: viewIn 0.4s var(--m3-easing); }
+        @keyframes viewIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* File Explorer Component Styles */
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: var(--bg-secondary);
+            border-radius: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .file-item:hover {
+            opacity: 0.9;
+        }
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-grow: 1;
+            min-width: 0;
+        }
+        .file-name {
+            font-size: 14px;
+            font-weight: 600;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .file-meta {
+            font-size: 11px;
+            color: var(--text-sub);
+        }
+        .file-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .file-action-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-sub);
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .file-action-btn:hover {
+            background: var(--glass-bg);
+            color: var(--text-main);
+        }
+        .file-action-btn.delete:hover {
+            color: #E11D48;
+        }
+
+        /* Icons Manager Grid */
+        .icon-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 14px;
+            margin-top: 12px;
+            max-height: 450px;
+            overflow-y: auto;
+            padding: 6px;
+        }
+        .icon-card {
+            background: var(--bg-secondary);
+            border-radius: 18px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .icon-card:hover {
+            transform: translateY(-2px);
+        }
+        .icon-preview-box {
+            width: 64px;
+            height: 64px;
+            border-radius: 14px;
+            background: rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            margin-bottom: 8px;
+            position: relative;
+        }
+        .icon-preview-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .icon-card-title {
+            font-size: 11px;
+            font-weight: 600;
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--text-main);
+        }
+        .icon-card-type {
+            font-size: 9px;
+            color: var(--accent-primary);
+            font-weight: 700;
+            margin-top: 2px;
+        }
+
+        /* Adaptive Icon (Fancy Icon) Renderer */
+        .fancy-preview-canvas-container {
+            width: 140px;
+            height: 140px;
+            position: relative;
+            border-radius: 28px;
+            overflow: hidden;
+            background: rgba(0,0,0,0.1);
+            margin: 0 auto 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .fancy-layer {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        /* Editor Area */
+        .editor-workspace {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+        @media (min-width: 768px) {
+            .editor-workspace {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .code-editor-textarea {
+            width: 100%;
+            height: 350px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Consolas', 'Courier New', Courier, monospace;
+            font-size: 13px;
+            border: none;
+            border-radius: 16px;
+            padding: 16px;
+            box-sizing: border-box;
+            resize: vertical;
+            outline: none;
+        }
+        .code-editor-textarea:focus {
+            box-shadow: 0 0 0 2px var(--accent-primary);
+        }
+
+        /* --- Dialog Overlay --- */
+        .dialog-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000; display: flex; align-items: center; justify-content: center;
+            opacity: 0; visibility: hidden; transition: all 0.3s var(--m3-easing);
+        }
+        .dialog-overlay.active { opacity: 1; visibility: visible; }
+        .glass-dialog {
+            background: var(--glass-bg);
+            border-radius: 28px;
+            padding: 24px; max-width: 450px; width: 90%; text-align: left;
+            transform: scale(0.9) translateY(20px); transition: all 0.4s var(--m3-easing);
+            box-sizing: border-box;
+        }
+        .dialog-overlay.active .glass-dialog { transform: scale(1) translateY(0); }
+
+        /* --- Toast Alert --- */
+        .toast {
+            position: fixed;
+            bottom: 110px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: var(--text-main);
+            color: var(--glass-bg);
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s var(--m3-easing);
+            z-index: 2000;
+        }
+        .toast.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .color-dot {
+            width: 24px;
+            height: 24px;
+            border-radius: 12px;
+            display: inline-block;
+            cursor: pointer;
+            margin-right: 6px;
+            transition: transform 0.2s;
+        }
+        .color-dot:active {
+            transform: scale(0.85);
+        }
+
+        /* Layout Grid Helpers */
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+
+        /* File Upload Zone */
+        .upload-zone {
+            border: 2px dashed var(--accent-primary);
+            border-radius: 20px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-bottom: 16px;
+        }
+        .upload-zone:hover {
+            background-color: rgba(51, 129, 255, 0.05);
+        }
+
+        .loading-container {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 20px;
+            font-weight: 600;
+        }
+        .loading-spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid var(--bg-secondary);
+            border-top: 3px solid var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Fancy Asset Editor list */
+        .fancy-asset-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 10px;
+        }
+        .fancy-asset-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-secondary);
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 13px;
+        }
+
+        /* Breadcrumb style for nested theme editor */
+        .editor-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .breadcrumb {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-sub);
+        }
+        .breadcrumb span.active-path {
+            color: var(--text-main);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header (Centered Title) -->
+    <header>
+        <div class="logo">ShowMeThemeEditor</div>
+        <button class="theme-toggle" id="theme-btn">
+            <span class="material-symbols-outlined">light_mode</span>
+        </button>
+    </header>
+
+    <div id="app-viewport">
+        <main id="main-content">
+            
+            <!-- Home: MTZ Upload / Create -->
+            <section id="view-home" class="view active">
+                <div class="glass-card">
+                    <h2>HyperOS/MIUI .mtz Theme Editor</h2>
+                    <p>
+                        This application lets you unpack and modify Xiaomi theme packages (.mtz) natively in your browser. Leverage pixel-perfect image resizing, XML code editing, and full adaptive launcher icon customizers before packaging it back for export.
+                    </p>
+                    
+                    <div class="upload-zone" id="drop-zone" onclick="document.getElementById('mtz-file-input').click()">
+                        <span class="material-symbols-outlined" style="font-size: 48px; color: var(--accent-primary); margin-bottom: 8px;">upload_file</span>
+                        <h3 style="margin: 0;">Click or Drag & Drop .mtz File</h3>
+                        <p style="margin: 4px 0 0 0; font-size: 12px;">Or start a blank project</p>
+                        <input type="file" id="mtz-file-input" accept=".mtz,.zip" style="display: none;">
+                    </div>
+
+                    <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                        <button class="ai-btn" onclick="createNewTheme()">
+                            <span class="material-symbols-outlined">add_circle</span>
+                            Create New Theme
+                        </button>
+                        <button class="ai-btn ai-btn-secondary" onclick="loadSampleTheme()">
+                            <span class="material-symbols-outlined">folder_open</span>
+                            Load Sample
+                        </button>
+                    </div>
+
+                    <div class="loading-container" id="main-loader">
+                        <div class="loading-spinner"></div>
+                        <span id="loader-text">Processing file, please wait...</span>
+                    </div>
+                </div>
+
+                <div class="glass-card" id="active-theme-card" style="display: none;">
+                    <h2>Active Project Directory</h2>
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                        <div>
+                            <p style="font-weight: 700; font-size: 16px; margin: 0;" id="theme-display-name">HyperGTA VI</p>
+                            <p style="margin: 4px 0 0 0; font-size: 12px;" id="theme-display-author">Designer: Kevin | Version: 1.0</p>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="ai-btn" onclick="switchView('view-explorer')">
+                                <span class="material-symbols-outlined">edit</span>
+                                Enter Editor
+                            </button>
+                            <button class="ai-btn ai-btn-danger" onclick="closeActiveTheme()">
+                                <span class="material-symbols-outlined">close</span>
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feature Cards -->
+                <div class="grid">
+                    <div class="glass-card">
+                        <h2>Image Auto-Resizing</h2>
+                        <p>Configure replacement behavior to keep theme layout scaling intact.</p>
+                        <div class="toggle-row">
+                            <span>Force replacement scaling to match asset dims</span>
+                            <label class="switch">
+                                <input type="checkbox" id="resize-on-replace" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <p style="font-size: 11px; color: var(--text-sub); margin-top: 4px;">When active, newly uploaded replacement graphics are automatically downscaled/upscaled onto an offline HTML Canvas element matching target aspect structures.</p>
+                    </div>
+
+                    <div class="glass-card">
+                        <h2>Quick Environment Config</h2>
+                        <div class="toggle-row">
+                            <span>Auto Live-Preview Render</span>
+                            <label class="switch">
+                                <input type="checkbox" id="auto-render-fancy" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="toggle-row">
+                            <span>Color Palette Theme</span>
+                            <div style="display: flex; align-items: center;">
+                                <span class="color-dot" style="background: #3381FF;" onclick="changeAccent('#3381FF')"></span>
+                                <span class="color-dot" style="background: #E11D48;" onclick="changeAccent('#E11D48')"></span>
+                                <span class="color-dot" style="background: #10B981;" onclick="changeAccent('#10B981')"></span>
+                                <span class="color-dot" style="background: #8B5CF6;" onclick="changeAccent('#8B5CF6')"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Explorer: File List & Directory Hierarchy -->
+            <section id="view-explorer" class="view">
+                <div class="glass-card">
+                    <div class="editor-header">
+                        <div class="breadcrumb">
+                            <span onclick="navigateToDir('root')" style="cursor:pointer; color:var(--accent-primary);">[Root]</span>
+                            <span id="sub-dir-breadcrumb"></span>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="ai-btn" style="padding: 8px 16px; font-size:13px;" onclick="exportMtzFile()">
+                                <span class="material-symbols-outlined">download</span>
+                                Export .mtz
+                            </button>
+                        </div>
+                    </div>
+
+                    <p>
+                        Click individual files to open the XML workspace editor or image viewer asset overlay. Expand package-specific zip files (like com.android.systemui) to browse nested resources.
+                    </p>
+
+                    <!-- Add New File/Folder action -->
+                    <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                        <button class="ai-btn ai-btn-secondary" style="padding: 8px 14px; font-size: 13px;" onclick="triggerAddFileDialog()">
+                            <span class="material-symbols-outlined">add</span>
+                            Add File
+                        </button>
+                        <button class="ai-btn ai-btn-secondary" style="padding: 8px 14px; font-size: 13px;" onclick="triggerAddFolderDialog()">
+                            <span class="material-symbols-outlined">create_new_folder</span>
+                            New Folder
+                        </button>
+                    </div>
+
+                    <div class="file-list" id="explorer-file-list">
+                        <!-- Filled Dynamically -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Icons Panel (Specially designed for Launcher Icons) -->
+            <section id="view-icons" class="view">
+                <div class="glass-card">
+                    <div class="editor-header">
+                        <div class="breadcrumb">
+                            <span onclick="switchView('view-explorer')" style="cursor:pointer; color:var(--accent-primary);">[Explorer]</span> / 
+                            <span class="active-path">icons Pack</span>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="ai-btn ai-btn-secondary" style="padding: 8px 16px; font-size:13px;" onclick="switchView('view-explorer')">
+                                <span class="material-symbols-outlined">arrow_back</span>
+                                Back to Explorer
+                            </button>
+                        </div>
+                    </div>
+
+                    <p>
+                        Edit package assets within your theme's launcher icon directory. Render layered previews of clock configurations and manage standalone icon shapes.
+                    </p>
+
+                    <div style="display: flex; border-bottom: 2px solid var(--bg-secondary); margin-bottom: 14px;">
+                        <button id="tab-btn-normal-icons" class="ai-btn" style="background: transparent; color: var(--text-main); border-radius: 0; border-bottom: 3px solid var(--accent-primary); padding: 10px 20px; font-size: 14px;" onclick="toggleIconTab('normal')">Normal Icons</button>
+                        <button id="tab-btn-fancy-icons" class="ai-btn" style="background: transparent; color: var(--text-sub); border-radius: 0; padding: 10px 20px; font-size: 14px;" onclick="toggleIconTab('fancy')">Adaptive Icons (Fancy Icons)</button>
+                    </div>
+
+                    <!-- Normal Icons tab -->
+                    <div id="tab-normal-icons">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                            <p style="margin: 0; font-size: 13px;">Replace, rename, or delete standard application PNG drawing assets.</p>
+                            <button class="ai-btn ai-btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick="triggerAddIcon('normal')">Add Normal Icon</button>
+                        </div>
+                        <div class="icon-grid" id="normal-icons-container">
+                            <!-- Populated with normal icons -->
+                        </div>
+                    </div>
+
+                    <!-- Fancy Icons tab -->
+                    <div id="tab-fancy-icons" style="display: none;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                            <p style="margin: 0; font-size: 13px;">Manage interactive, animatable layered dynamic clock & calendar components.</p>
+                            <button class="ai-btn ai-btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick="triggerAddIcon('fancy')">Add Fancy Icon</button>
+                        </div>
+                        <div class="icon-grid" id="fancy-icons-container">
+                            <!-- Populated with fancy icons -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Editor: XML / Text Code Editor -->
+            <section id="view-editor" class="view">
+                <div class="glass-card">
+                    <div class="editor-header">
+                        <div class="breadcrumb">
+                            <span onclick="switchView('view-explorer')" style="cursor:pointer; color:var(--accent-primary);">[Explorer]</span> / 
+                            <span class="active-path" id="editing-filename-label">description.xml</span>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="ai-btn" style="padding: 8px 16px; font-size: 13px;" onclick="saveTextContent()">
+                                <span class="material-symbols-outlined">save</span>
+                                Save Changes
+                            </button>
+                            <button class="ai-btn ai-btn-secondary" style="padding: 8px 16px; font-size: 13px;" onclick="closeEditor()">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="editor-workspace">
+                        <div>
+                            <h3 style="margin-bottom: 12px;">XML Configuration Workspace</h3>
+                            <textarea class="code-editor-textarea" id="text-editor-area" spellcheck="false"></textarea>
+                        </div>
+                        <div>
+                            <h3>Syntax Validation & Format Reference</h3>
+                            <p>Changes written to these values are saved in temporary memory buffer and packed directly on compilation export.</p>
+                            <div class="glass-card" style="margin-bottom: 0; background: var(--bg-secondary);">
+                                <h4 style="margin: 0 0 6px 0; font-size: 13px; font-weight: 700;">description.xml standard structure</h4>
+                                <pre style="font-size: 11px; white-space: pre-wrap; margin: 0; font-family: monospace;" id="xml-reference-format">
+&lt;?xml version='1.0' encoding='utf-8' standalone='yes' ?&gt;
+&lt;MIUI-Theme&gt;
+  &lt;title&gt;polandballui VI&lt;/title&gt;
+  &lt;designer&gt;poland&lt;/designer&gt;
+  &lt;author&gt;poland&lt;/author&gt;
+  &lt;version&gt;1.0&lt;/version&gt;
+  &lt;miuiAdapterVersion&gt;2.0&lt;/miuiAdapterVersion&gt;
+  &lt;uiVersion&gt;10&lt;/uiVersion&gt;
+&lt;/MIUI-Theme&gt;</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Bottom Navigation Bar -->
+    <div class="nav-container">
+        <nav class="nav-rail">
+            <div class="nav-item active" data-view="view-home">
+                <span class="material-symbols-outlined">home</span>
+            </div>
+            <div class="nav-item" data-view="view-explorer" id="nav-btn-explorer">
+                <span class="material-symbols-outlined">folder</span>
+            </div>
+            <div class="nav-item" data-view="view-icons" id="nav-btn-icons-pack">
+                <span class="material-symbols-outlined">palette</span>
+            </div>
+        </nav>
+    </div>
+
+    <!-- Modal Dialogs -->
+    
+    <!-- 1. Universal Text Input Dialog (Rename, New File, New Folder) -->
+    <div class="dialog-overlay" id="text-input-dialog">
+        <div class="glass-dialog">
+            <h2 id="text-dialog-title">Rename File</h2>
+            <p id="text-dialog-desc">Enter the new file name:</p>
+            <div class="glass-input-wrapper">
+                <input type="text" class="glass-input" id="text-dialog-input">
+            </div>
+            <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px;">
+                <button class="ai-btn ai-btn-secondary" onclick="closeTextDialog()">Cancel</button>
+                <button class="ai-btn" id="text-dialog-submit-btn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. File Viewer & Replacer Dialog (Image Viewer, Action Center) -->
+    <div class="dialog-overlay" id="file-viewer-dialog">
+        <div class="glass-dialog" style="max-width: 500px;">
+            <h2 id="viewer-title">Asset Configuration</h2>
+            <p id="viewer-subtitle" style="font-family: monospace; font-size: 12px;"></p>
+            
+            <div id="viewer-image-preview-area" style="text-align: center; margin: 16px 0; background: var(--bg-secondary); border-radius: 16px; padding: 16px; min-height: 120px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                <img id="viewer-img-element" style="max-width: 100%; max-height: 200px; object-fit: contain; display: none;">
+                <span id="viewer-non-img-placeholder" class="material-symbols-outlined" style="font-size: 48px; color: var(--text-sub);">insert_drive_file</span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <h4 style="margin: 0; font-size: 13px;">Replace Resource File</h4>
+                <input type="file" id="viewer-replace-file-input" class="glass-input" style="padding: 10px;" accept="image/*,.xml,.txt">
+            </div>
+
+            <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+                <button class="ai-btn ai-btn-secondary" onclick="closeViewerDialog()">Close</button>
+                <button class="ai-btn ai-btn-danger" id="viewer-delete-btn">Delete</button>
+                <button class="ai-btn" id="viewer-save-btn">Apply Replacement</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Fancy Icon Detail Customizer (Sub-layers preview, manifest view) -->
+    <div class="dialog-overlay" id="fancy-detail-dialog">
+        <div class="glass-dialog" style="max-width: 600px; overflow-y: auto; max-height: 90vh;">
+            <h2 id="fancy-dialog-app-name">com.android.deskclock</h2>
+            <p>Customize specific assets and relative positioning properties of this layered adaptive container configuration.</p>
+
+            <div class="fancy-preview-canvas-container" id="fancy-live-canvas-preview">
+                <!-- Layers dynamically appended -->
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h3 style="margin: 0;">Asset Layers</h3>
+                <button class="ai-btn ai-btn-secondary" style="padding: 6px 12px; font-size: 11px;" onclick="triggerAddFancyAsset()">Add Layer</button>
+            </div>
+            
+            <div class="fancy-asset-list" id="fancy-assets-editor-list">
+                <!-- Row for each asset -->
+            </div>
+
+            <div style="margin-top: 16px;">
+                <h3>manifest.xml Config Code</h3>
+                <textarea class="code-editor-textarea" id="fancy-manifest-textarea" style="height: 150px; font-size: 11px;"></textarea>
+            </div>
+
+            <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+                <button class="ai-btn ai-btn-secondary" onclick="closeFancyDetailDialog()">Close</button>
+                <button class="ai-btn" onclick="saveFancyIconChanges()">Save & Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Message Box -->
+    <div class="toast" id="toast-message">Notification Message</div>
+
+    <script>
+        /**
+         * ShowMeThemeEditor Core Logic
+         * Pure Vanilla JavaScript + JSZip
+         */
+
+        // App States
+        let themeData = {
+            description: {
+                title: "polandballui",
+                designer: "poland",
+                author: "poland",
+                version: "1.0",
+                miuiAdapterVersion: "2.0",
+                uiVersion: "10",
+                keywords: "MIUIThemeEditor"
+            },
+            files: {},
+            nestedZips: {} 
+        };
+
+        let currentDirPath = "root"; 
+        let activeEditPath = "";
+        let currentIconTab = "normal";
+        let activeFancyAppPackage = ""; 
+
+        // Document Selectors
+        const viewport = document.getElementById('app-viewport');
+        const themeBtn = document.getElementById('theme-btn');
+        const themeIcon = themeBtn.querySelector('span');
+        const toast = document.getElementById('toast-message');
+        const explorerFileList = document.getElementById('explorer-file-list');
+        const subDirBreadcrumb = document.getElementById('sub-dir-breadcrumb');
+
+        // Customizer Setup
+        let currentAccent = '#3381FF';
+
+        function changeAccent(color) {
+            currentAccent = color;
+            document.documentElement.style.setProperty('--accent-primary', color);
+            document.documentElement.style.setProperty('--accent-active', adjustColorBrightness(color, -20));
+            showToast(`Theme accent updated to ${color}`);
+        }
+
+        function adjustColorBrightness(hex, percent) {
+            let R = parseInt(hex.substring(1, 3), 16);
+            let G = parseInt(hex.substring(3, 5), 16);
+            let B = parseInt(hex.substring(5, 7), 16);
+            R = parseInt(R * (100 + percent) / 100);
+            G = parseInt(G * (100 + percent) / 100);
+            B = parseInt(B * (100 + percent) / 100);
+            R = (R < 255) ? R : 255;
+            G = (G < 255) ? G : 255;
+            B = (B < 255) ? B : 255;
+            const rHex = ((R.toString(16).length == 1) ? "0" + R.toString(16) : R.toString(16));
+            const gHex = ((G.toString(16).length == 1) ? "0" + G.toString(16) : G.toString(16));
+            const bHex = ((B.toString(16).length == 1) ? "0" + B.toString(16) : B.toString(16));
+            return "#" + rHex + gHex + bHex;
+        }
+
+        function showToast(msg) {
+            toast.textContent = msg;
+            toast.classList.add('active');
+            setTimeout(() => {
+                toast.classList.remove('active');
+            }, 2500);
+        }
+
+        window.onload = () => {
+            initSampleData();
+            renderExplorer();
+            parseAndRenderIcons();
+        };
+
+        // --- View Controller Protocol ---
+        const navItems = document.querySelectorAll('.nav-item');
+        const views = document.querySelectorAll('.view');
+
+        function switchView(viewId) {
+            navItems.forEach(n => {
+                n.classList.remove('active');
+                if (n.getAttribute('data-view') === viewId) {
+                    n.classList.add('active');
+                }
+            });
+
+            views.forEach(v => {
+                v.classList.remove('active');
+                if (v.id === viewId) {
+                    v.classList.add('active');
+                    viewport.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+
+            if (viewId === 'view-explorer') {
+                renderExplorer();
+            } else if (viewId === 'view-icons') {
+                parseAndRenderIcons();
+            }
+        }
+
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                switchView(item.getAttribute('data-view'));
+            });
+        });
+
+        function setTheme(isDark) {
+            document.body.classList.toggle('dark-mode', isDark);
+            themeIcon.textContent = isDark ? 'dark_mode' : 'light_mode';
+        }
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+        setTheme(prefersDark.matches);
+        themeBtn.addEventListener('click', () => {
+            setTheme(!document.body.classList.contains('dark-mode'));
+        });
+
+        // --- MTZ Structure Initialization ---
+        function initSampleData() {
+            themeData.files = {};
+            themeData.nestedZips = {};
+
+            themeData.files["description.xml"] = createDescriptionXml(themeData.description);
+
+            // wallpapers
+            themeData.files["wallpaper/default_wallpaper.jpg"] = createDummyImage(1080, 2400, "#1e3a8a", "Default Wallpaper");
+            themeData.files["wallpaper/lock_wallpaper.jpg"] = createDummyImage(1080, 2400, "#311042", "Lock Wallpaper");
+
+            // sub-archives inside MIUI .mtz
+            themeData.nestedZips["clock_2x4"] = {
+                "manifest.xml": '<?xml version="1.0" encoding="utf-8"?>\n<Clock version="1" />',
+                "bg.png": createDummyImage(200, 100, "#444444", "Clock BG")
+            };
+
+            themeData.nestedZips["com.android.systemui"] = {
+                "theme_values.xml": '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n  <color name="status_bar_bg">#ff000000</color>\n</resources>'
+            };
+
+            themeData.nestedZips["icons"] = {
+                "res/drawable-xxhdpi/com.android.settings.png": createDummyImage(168, 168, "#10b981", "Settings"),
+                "res/drawable-xxhdpi/com.tencent.mm.png": createDummyImage(168, 168, "#22c55e", "WeChat"),
+                "res/drawable-xxhdpi/com.android.browser.png": createDummyImage(168, 168, "#3b82f6", "Browser"),
+                "res/drawable-xxhdpi/com.android.camera.png": createDummyImage(168, 168, "#4b5563", "Camera"),
+                
+                // Fancy Clock
+                "fancy_icons/com.android.deskclock/manifest.xml": `<?xml version="1.0" encoding="utf-8"?>
+<Icon version="1" frameRate="0" width="168" height="168" screenWidth="1080">
+    <Image x="84" y="84" align="center" alignV="center" src="icon_bg.png" />
+    <Image name="shi" x="84" y="84" align="center" alignV="center" src="hour.png" angle="#hour12*30" />
+    <Image name="fen" x="84" y="84" align="center" alignV="center" src="minute.png" angle="#minute*6" />
+</Icon>`,
+                "fancy_icons/com.android.deskclock/icon_bg.png": createDummyImage(168, 168, "#ff5722", "Clock BG"),
+                "fancy_icons/com.android.deskclock/hour.png": createClockHand(168, 168, 40, 6, "#ffffff"),
+                "fancy_icons/com.android.deskclock/minute.png": createClockHand(168, 168, 60, 4, "#eeeeee"),
+
+                // Fancy Calendar
+                "fancy_icons/com.miui.calendar/manifest.xml": `<?xml version="1.0" encoding="utf-8"?>
+<Icon version="1">
+    <Image x="84" y="84" align="center" alignV="center" src="bg.png" />
+</Icon>`,
+                "fancy_icons/com.miui.calendar/bg.png": createDummyImage(168, 168, "#e11d48", "Calendar"),
+
+                "transform_config.xml": `<?xml version="1.0" encoding="utf-8"?>\n<Config/>`
+            };
+
+            themeData.nestedZips["com.android.contacts"] = { "theme_values.xml": "<resources/>" };
+            themeData.nestedZips["com.android.mms"] = { "theme_values.xml": "<resources/>" };
+            themeData.nestedZips["com.android.phone"] = { "theme_values.xml": "<resources/>" };
+            themeData.nestedZips["com.miui.home"] = { "theme_values.xml": "<resources/>" };
+            themeData.nestedZips["lockscreen"] = { "manifest.xml": "<Lockscreen/>" };
+
+            updateThemeDisplay();
+        }
+
+        function createDescriptionXml(desc) {
+            return `<?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+<MIUI-Theme>
+  <title>${desc.title}</title>
+  <designer>${desc.designer}</designer>
+  <author>${desc.author}</author>
+  <version>${desc.version}</version>
+  <miuiAdapterVersion>${desc.miuiAdapterVersion}</miuiAdapterVersion>
+  <uiVersion>${desc.uiVersion}</uiVersion>
+  <keywords>${desc.keywords}</keywords>
+</MIUI-Theme>`;
+        }
+
+        function updateThemeDisplay() {
+            document.getElementById('active-theme-card').style.display = 'block';
+            document.getElementById('theme-display-name').textContent = themeData.description.title;
+            document.getElementById('theme-display-author').textContent = `Designer: ${themeData.description.designer} | Version: ${themeData.description.version}`;
+        }
+
+        function closeActiveTheme() {
+            if(confirm("Are you sure you want to close the active theme? Unsaved modifications will be lost.")) {
+                themeData.files = {};
+                themeData.nestedZips = {};
+                document.getElementById('active-theme-card').style.display = 'none';
+                showToast("Theme directory closed.");
+            }
+        }
+
+        function createNewTheme() {
+            themeData.description = {
+                title: "New Custom Theme",
+                designer: "Author",
+                author: "Author",
+                version: "1.0",
+                miuiAdapterVersion: "2.0",
+                uiVersion: "10",
+                keywords: "MIUIThemeEditor"
+            };
+            initSampleData();
+            switchView('view-explorer');
+            showToast("New blank theme layout generated.");
+        }
+
+        // --- ZIP / MTZ Parsing Engines ---
+        document.getElementById('mtz-file-input').addEventListener('change', handleFileSelect);
+
+        const dropZone = document.getElementById('drop-zone');
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.style.backgroundColor = 'rgba(51, 129, 255, 0.1)';
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.style.backgroundColor = 'transparent';
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.style.backgroundColor = 'transparent';
+            if(e.dataTransfer.files.length > 0) {
+                processUploadedFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        function handleFileSelect(e) {
+            if (e.target.files.length > 0) {
+                processUploadedFile(e.target.files[0]);
+            }
+        }
+
+        async function processUploadedFile(file) {
+            const loader = document.getElementById('main-loader');
+            loader.style.display = 'flex';
+            document.getElementById('text-dialog-input').textContent = "Unpacking and analyzing assets...";
+
+            try {
+                const zip = await JSZip.loadAsync(file);
+                themeData.files = {};
+                themeData.nestedZips = {};
+
+                for (const [relativePath, fileEntry] of Object.entries(zip.files)) {
+                    if (fileEntry.dir) continue;
+
+                    const parts = relativePath.split('/');
+                    const topLevelName = parts[0];
+
+                    const subArchives = [
+                        'clock_2x4', 'com.android.contacts', 'com.android.mms', 'com.android.phone', 
+                        'com.android.settings', 'com.android.systemui', 'com.miui.home', 
+                        'framework-miui-res', 'icons', 'lockscreen', 'miui.systemui.plugin', 'miwallpaper'
+                    ];
+
+                    if (subArchives.includes(topLevelName) && parts.length === 1) {
+                        const innerZipBuffer = await fileEntry.async("arraybuffer");
+                        try {
+                            const innerZip = await JSZip.loadAsync(innerZipBuffer);
+                            themeData.nestedZips[topLevelName] = {};
+                            for (const [innerPath, innerFile] of Object.entries(innerZip.files)) {
+                                if (innerFile.dir) continue;
+                                
+                                if (innerPath.endsWith('.png') || innerPath.endsWith('.jpg') || innerPath.endsWith('.webp')) {
+                                    const imgBlob = await innerFile.async("blob");
+                                    themeData.nestedZips[topLevelName][innerPath] = imgBlob;
+                                } else {
+                                    const textContent = await innerFile.async("text");
+                                    themeData.nestedZips[topLevelName][innerPath] = textContent;
+                                }
+                            }
+                        } catch (nestedErr) {
+                            const rawBlob = await fileEntry.async("blob");
+                            themeData.files[relativePath] = rawBlob;
+                        }
+                    } else {
+                        if (relativePath.endsWith('.xml') || relativePath.endsWith('.txt')) {
+                            const txt = await fileEntry.async("text");
+                            themeData.files[relativePath] = txt;
+                        } else {
+                            const blob = await fileEntry.async("blob");
+                            themeData.files[relativePath] = blob;
+                        }
+                    }
+                }
+
+                if (themeData.files["description.xml"]) {
+                    parseDescriptionXml(themeData.files["description.xml"]);
+                }
+
+                showToast("MTZ theme package successfully mounted!");
+                updateThemeDisplay();
+                switchView('view-explorer');
+            } catch (err) {
+                console.error(err);
+                showToast("Extraction failed: Select a valid .mtz or zipped archive.");
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+
+        function parseDescriptionXml(xmlText) {
+            try {
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+                const fields = ['title', 'designer', 'author', 'version', 'miuiAdapterVersion', 'uiVersion', 'keywords'];
+                fields.forEach(field => {
+                    const elem = xmlDoc.getElementsByTagName(field)[0];
+                    if (elem) {
+                        themeData.description[field] = elem.textContent;
+                    }
+                });
+            } catch(e) {
+                console.warn("Failed to parse description.xml template configuration structure.", e);
+            }
+        }
+
+        function loadSampleTheme() {
+            initSampleData();
+            showToast("Demo design directory loaded.");
+            switchView('view-explorer');
+        }
+
+        // --- Directory Nav and File List Renderer ---
+        function navigateToDir(dir) {
+            currentDirPath = dir;
+            renderExplorer();
+        }
+
+        function renderExplorer() {
+            explorerFileList.innerHTML = "";
+
+            if (currentDirPath === "root") {
+                subDirBreadcrumb.innerHTML = "";
+
+                for (const subArchiveName of Object.keys(themeData.nestedZips)) {
+                    createFileItemElement(subArchiveName, "archive", true);
+                }
+
+                const paths = Object.keys(themeData.files);
+                const foldersRendered = new Set();
+
+                paths.forEach(p => {
+                    const parts = p.split('/');
+                    if (parts.length > 1) {
+                        const folderName = parts[0];
+                        if (!foldersRendered.has(folderName)) {
+                            foldersRendered.add(folderName);
+                            createFileItemElement(folderName, "folder", true);
+                        }
+                    } else {
+                        const ext = p.substring(p.lastIndexOf('.') + 1).toLowerCase();
+                        const type = (ext === 'png' || ext === 'jpg' || ext === 'webp' || ext === 'xml') ? ext : "file";
+                        createFileItemElement(p, type, false, p);
+                    }
+                });
+            } else {
+                const isSubArchive = themeData.nestedZips[currentDirPath] !== undefined;
+                subDirBreadcrumb.innerHTML = ` / <span class="active-path">${currentDirPath}</span>`;
+
+                if (isSubArchive) {
+                    const innerFiles = themeData.nestedZips[currentDirPath];
+                    const renderedSubfolders = new Set();
+
+                    for (const innerPath of Object.keys(innerFiles)) {
+                        const parts = innerPath.split('/');
+                        
+                        if (parts.length > 1) {
+                            const subFolderName = parts[0];
+                            if (!renderedSubfolders.has(subFolderName)) {
+                                renderedSubfolders.add(subFolderName);
+                                createFileItemElement(subFolderName, "folder", true, `${currentDirPath}/${subFolderName}`);
+                            }
+                        } else {
+                            const ext = innerPath.substring(innerPath.lastIndexOf('.') + 1).toLowerCase();
+                            createFileItemElement(innerPath, ext, false, innerPath);
+                        }
+                    }
+                } else {
+                    const prefix = currentDirPath + "/";
+                    const paths = Object.keys(themeData.files).filter(p => p.startsWith(prefix));
+
+                    paths.forEach(p => {
+                        const relativeName = p.substring(prefix.length);
+                        if (relativeName.includes('/')) {
+                            const folderPart = relativeName.split('/')[0];
+                            createFileItemElement(folderPart, "folder", true, prefix + folderPart);
+                        } else {
+                            const ext = relativeName.substring(relativeName.lastIndexOf('.') + 1).toLowerCase();
+                            createFileItemElement(relativeName, ext, false, p);
+                        }
+                    });
+                }
+            }
+        }
+
+        function createFileItemElement(name, type, isDir, fullPath = "") {
+            const item = document.createElement('div');
+            item.className = "file-item";
+
+            let icon = "insert_drive_file";
+            if (type === "folder") icon = "folder";
+            else if (type === "archive") icon = "inventory_2";
+            else if (type === "png" || type === "jpg" || type === "webp") icon = "image";
+            else if (type === "xml") icon = "code";
+
+            let infoContent = `<span class="material-symbols-outlined" style="color: var(--accent-primary);">${icon}</span>
+                               <div style="min-width: 0;">
+                                   <div class="file-name">${name}</div>
+                                   <div class="file-meta">${type.toUpperCase()}</div>
+                               </div>`;
+
+            const infoDiv = document.createElement('div');
+            infoDiv.className = "file-info";
+            infoDiv.innerHTML = infoContent;
+
+            infoDiv.addEventListener('click', () => {
+                if (isDir) {
+                    if (type === "archive") {
+                        if (name === "icons") {
+                            switchView('view-icons');
+                        } else {
+                            navigateToDir(name);
+                        }
+                    } else {
+                        navigateToDir(fullPath || name);
+                    }
+                } else {
+                    openAssetManager(fullPath || name);
+                }
+            });
+
+            item.appendChild(infoDiv);
+
+            const actions = document.createElement('div');
+            actions.className = "file-actions";
+
+            if (name !== "description.xml" && !isDir) {
+                const editBtn = document.createElement('button');
+                editBtn.className = "file-action-btn";
+                editBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 18px;">drive_file_rename_outline</span>`;
+                editBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    triggerRenameFile(fullPath || name);
+                };
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = "file-action-btn delete";
+                deleteBtn.innerHTML = `<span class="material-symbols-outlined" style="font-size: 18px;">delete</span>`;
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    triggerDeleteFile(fullPath || name);
+                };
+
+                actions.appendChild(editBtn);
+                actions.appendChild(deleteBtn);
+            }
+
+            item.appendChild(actions);
+            explorerFileList.appendChild(item);
+        }
+
+        // --- File Manipulation Operations ---
+        function triggerRenameFile(path) {
+            activeEditPath = path;
+            const originalName = path.includes('/') ? path.substring(path.lastIndexOf('/') + 1) : path;
+            
+            document.getElementById('text-dialog-title').textContent = "Rename Item";
+            document.getElementById('text-dialog-desc').textContent = `Rename "${originalName}" to:`;
+            document.getElementById('text-dialog-input').value = originalName;
+            
+            const submitBtn = document.getElementById('text-dialog-submit-btn');
+            submitBtn.onclick = applyFileRename;
+            
+            document.getElementById('text-input-dialog').classList.add('active');
+        }
+
+        function applyFileRename() {
+            const newName = document.getElementById('text-dialog-input').value.trim();
+            if (!newName) return;
+
+            const isSubArchive = themeData.nestedZips[currentDirPath] !== undefined;
+
+            if (isSubArchive) {
+                const oldContent = themeData.nestedZips[currentDirPath][activeEditPath];
+                delete themeData.nestedZips[currentDirPath][activeEditPath];
+                const pathPrefix = activeEditPath.includes('/') ? activeEditPath.substring(0, activeEditPath.lastIndexOf('/') + 1) : "";
+                themeData.nestedZips[currentDirPath][pathPrefix + newName] = oldContent;
+            } else {
+                const oldContent = themeData.files[activeEditPath];
+                delete themeData.files[activeEditPath];
+                const pathPrefix = activeEditPath.includes('/') ? activeEditPath.substring(0, activeEditPath.lastIndexOf('/') + 1) : "";
+                themeData.files[pathPrefix + newName] = oldContent;
+            }
+
+            closeTextDialog();
+            renderExplorer();
+            showToast("Asset renamed successfully.");
+        }
+
+        function triggerDeleteFile(path) {
+            if (confirm(`Are you sure you want to delete "${path}"?`)) {
+                const isSubArchive = themeData.nestedZips[currentDirPath] !== undefined;
+                if (isSubArchive) {
+                    delete themeData.nestedZips[currentDirPath][path];
+                } else {
+                    delete themeData.files[path];
+                }
+                renderExplorer();
+                showToast("File deleted from memory.");
+            }
+        }
+
+        // --- File Creation API ---
+        function triggerAddFileDialog() {
+            document.getElementById('text-dialog-title').textContent = "Create New File";
+            document.getElementById('text-dialog-desc').textContent = "Specify the filename (e.g. theme_values.xml):";
+            document.getElementById('text-dialog-input').value = "new_config.xml";
+
+            const submitBtn = document.getElementById('text-dialog-submit-btn');
+            submitBtn.onclick = applyAddFile;
+
+            document.getElementById('text-input-dialog').classList.add('active');
+        }
+
+        function applyAddFile() {
+            const name = document.getElementById('text-dialog-input').value.trim();
+            if(!name) return;
+
+            const isSubArchive = themeData.nestedZips[currentDirPath] !== undefined;
+            const dummyXml = `<?xml version="1.0" encoding="utf-8"?>\n<resources>\n</resources>`;
+
+            if (isSubArchive) {
+                themeData.nestedZips[currentDirPath][name] = dummyXml;
+            } else {
+                const path = currentDirPath === "root" ? name : `${currentDirPath}/${name}`;
+                themeData.files[path] = dummyXml;
+            }
+
+            closeTextDialog();
+            renderExplorer();
+            showToast("Blank file initialized.");
+        }
+
+        function triggerAddFolderDialog() {
+            document.getElementById('text-dialog-title').textContent = "Create New Directory";
+            document.getElementById('text-dialog-desc').textContent = "Enter folder name:";
+            document.getElementById('text-dialog-input').value = "new_folder";
+
+            const submitBtn = document.getElementById('text-dialog-submit-btn');
+            submitBtn.onclick = applyAddFolder;
+
+            document.getElementById('text-input-dialog').classList.add('active');
+        }
+
+        function applyAddFolder() {
+            const name = document.getElementById('text-dialog-input').value.trim();
+            if(!name) return;
+
+            const path = currentDirPath === "root" ? `${name}/.keep` : `${currentDirPath}/${name}/.keep`;
+            themeData.files[path] = "#keep";
+
+            closeTextDialog();
+            renderExplorer();
+            showToast("Folder registered in tree.");
+        }
+
+        function closeTextDialog() {
+            document.getElementById('text-input-dialog').classList.remove('active');
+        }
+
+        // --- Asset Manager & Image Resizer Engine ---
+        async function openAssetManager(path) {
+            activeEditPath = path;
+            const isSubArchive = themeData.nestedZips[currentDirPath] !== undefined;
+            const filename = path.substring(path.lastIndexOf('/') + 1);
+
+            document.getElementById('viewer-title').textContent = filename;
+            document.getElementById('viewer-subtitle').textContent = path;
+
+            const imgEl = document.getElementById('viewer-img-element');
+            const placeholderEl = document.getElementById('viewer-non-img-placeholder');
+            
+            imgEl.style.display = 'none';
+            placeholderEl.style.display = 'block';
+
+            let fileContent;
+            if (isSubArchive) {
+                fileContent = themeData.nestedZips[currentDirPath][path];
+            } else {
+                fileContent = themeData.files[path];
+            }
+
+            const ext = filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
+            const isImage = ['png', 'jpg', 'jpeg', 'webp'].includes(ext);
+
+            if (isImage && fileContent) {
+                let imgUrl = "";
+                if (fileContent instanceof Blob) {
+                    imgUrl = URL.createObjectURL(fileContent);
+                } else if (typeof fileContent === 'string' && fileContent.startsWith('data:image')) {
+                    imgUrl = fileContent;
+                }
+
+                if (imgUrl) {
+                    imgEl.src = imgUrl;
+                    imgEl.style.display = 'block';
+                    placeholderEl.style.display = 'none';
+                }
+            }
+
+            document.getElementById('viewer-delete-btn').onclick = () => {
+                closeViewerDialog();
+                triggerDeleteFile(path);
+            };
+
+            document.getElementById('viewer-save-btn').onclick = async () => {
+                const replaceInput = document.getElementById('viewer-replace-file-input');
+                if (replaceInput.files.length === 0) {
+                    showToast("No replacement file has been selected.");
+                    return;
+                }
+
+                const newFile = replaceInput.files[0];
+                const shouldResize = document.getElementById('resize-on-replace').checked;
+
+                if (isImage && shouldResize) {
+                    try {
+                        const originalDims = await getImageDimensions(fileContent);
+                        const resizedBlob = await resizeImage(newFile, originalDims.width, originalDims.height);
+                        saveReplacedData(resizedBlob);
+                    } catch (err) {
+                        console.error("Scale mapping failed. Committing raw format instead.", err);
+                        saveReplacedData(newFile);
+                    }
+                } else {
+                    if (ext === 'xml' || ext === 'txt') {
+                        const text = await newFile.text();
+                        saveReplacedData(text);
+                    } else {
+                        saveReplacedData(newFile);
+                    }
+                }
+            };
+
+            if (ext === 'xml' || ext === 'txt') {
+                openTextEditor(path, fileContent);
+                return;
+            }
+
+            document.getElementById('file-viewer-dialog').classList.add('active');
+        }
+
+        function saveReplacedData(data) {
+            const isSubArchive = themeData.nestedZips[currentDirPath] !== undefined;
+            if (isSubArchive) {
+                themeData.nestedZips[currentDirPath][activeEditPath] = data;
+            } else {
+                themeData.files[activeEditPath] = data;
+            }
+            closeViewerDialog();
+            renderExplorer();
+            showToast("Resource successfully replaced.");
+        }
+
+        function closeViewerDialog() {
+            document.getElementById('file-viewer-dialog').classList.remove('active');
+            document.getElementById('viewer-replace-file-input').value = "";
+        }
+
+        function getImageDimensions(blobOrUrl) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => {
+                    resolve({ width: img.naturalWidth, height: img.naturalHeight });
+                };
+                img.onerror = reject;
+                if (blobOrUrl instanceof Blob) {
+                    img.src = URL.createObjectURL(blobOrUrl);
+                } else {
+                    img.src = blobOrUrl;
+                }
+            });
+        }
+
+        function resizeImage(file, targetWidth, targetHeight) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = targetWidth;
+                        canvas.height = targetHeight;
+                        const ctx = canvas.getContext('2d');
+                        
+                        ctx.imageSmoothingEnabled = true;
+                        ctx.imageSmoothingQuality = 'high';
+                        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+                        
+                        canvas.toBlob((blob) => {
+                            if (blob) resolve(blob);
+                            else reject(new Error("Canvas write error"));
+                        }, 'image/png');
+                    };
+                    img.onerror = reject;
+                    img.src = e.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // --- Text/XML Editor System ---
+        function openTextEditor(path, content) {
+            activeEditPath = path;
+            const filename = path.substring(path.lastIndexOf('/') + 1);
+            document.getElementById('editing-filename-label').textContent = filename;
+            document.getElementById('text-editor-area').value = content || "";
+            switchView('view-editor');
+        }
+
+        function saveTextContent() {
+            const editedText = document.getElementById('text-editor-area').value;
+            const isSubArchive = themeData.nestedZips[currentDirPath] !== undefined;
+
+            if (isSubArchive) {
+                themeData.nestedZips[currentDirPath][activeEditPath] = editedText;
+            } else {
+                themeData.files[activeEditPath] = editedText;
+            }
+
+            if (activeEditPath === "description.xml") {
+                parseDescriptionXml(editedText);
+                updateThemeDisplay();
+            }
+
+            showToast("Text layout changes committed.");
+            switchView('view-explorer');
+        }
+
+        function closeEditor() {
+            switchView('view-explorer');
+        }
+
+        // --- Specialized Launcher Icons Pack Manager (icons) ---
+        function toggleIconTab(tab) {
+            currentIconTab = tab;
+            document.getElementById('tab-btn-normal-icons').style.borderBottom = tab === 'normal' ? '3px solid var(--accent-primary)' : 'none';
+            document.getElementById('tab-btn-normal-icons').style.color = tab === 'normal' ? 'var(--text-main)' : 'var(--text-sub)';
+            document.getElementById('tab-btn-fancy-icons').style.borderBottom = tab === 'fancy' ? '3px solid var(--accent-primary)' : 'none';
+            document.getElementById('tab-btn-fancy-icons').style.color = tab === 'fancy' ? 'var(--text-main)' : 'var(--text-sub)';
+
+            document.getElementById('tab-normal-icons').style.display = tab === 'normal' ? 'block' : 'none';
+            document.getElementById('tab-fancy-icons').style.display = tab === 'fancy' ? 'block' : 'none';
+        }
+
+        function parseAndRenderIcons() {
+            const normalContainer = document.getElementById('normal-icons-container');
+            const fancyContainer = document.getElementById('fancy-icons-container');
+            
+            normalContainer.innerHTML = "";
+            fancyContainer.innerHTML = "";
+
+            const iconArchive = themeData.nestedZips["icons"];
+            if (!iconArchive) {
+                normalContainer.innerHTML = "<p>Target folder (icons) package not found.</p>";
+                fancyContainer.innerHTML = "<p>Target folder (icons) package not found.</p>";
+                return;
+            }
+
+            const fancyApps = new Set();
+            const normalFiles = [];
+
+            for (const path of Object.keys(iconArchive)) {
+                if (path.startsWith("fancy_icons/")) {
+                    const parts = path.split('/');
+                    if (parts.length > 2) {
+                        fancyApps.add(parts[1]);
+                    }
+                } else if (path.startsWith("res/")) {
+                    normalFiles.push(path);
+                }
+            }
+
+            // Render Normal Icons
+            normalFiles.forEach(path => {
+                const filename = path.substring(path.lastIndexOf('/') + 1);
+                const appName = filename.replace('.png', '');
+                
+                const card = document.createElement('div');
+                card.className = "icon-card";
+                card.onclick = () => openNormalIconManager(path);
+
+                const previewBox = document.createElement('div');
+                previewBox.className = "icon-preview-box";
+                
+                const img = document.createElement('img');
+                const fileContent = iconArchive[path];
+                if (fileContent instanceof Blob) {
+                    img.src = URL.createObjectURL(fileContent);
+                } else if (typeof fileContent === 'string' && fileContent.startsWith('data:image')) {
+                    img.src = fileContent;
+                }
+                
+                previewBox.appendChild(img);
+                card.appendChild(previewBox);
+
+                const title = document.createElement('div');
+                title.className = "icon-card-title";
+                title.textContent = appName;
+                title.title = appName;
+                card.appendChild(title);
+
+                const typeLabel = document.createElement('div');
+                typeLabel.className = "icon-card-type";
+                typeLabel.textContent = "NORMAL";
+                card.appendChild(typeLabel);
+
+                normalContainer.appendChild(card);
+            });
+
+            // Render Adaptive Fancy Icons
+            fancyApps.forEach(appPackage => {
+                const card = document.createElement('div');
+                card.className = "icon-card";
+                card.onclick = () => openFancyIconManager(appPackage);
+
+                const previewBox = document.createElement('div');
+                previewBox.className = "icon-preview-box";
+                previewBox.id = `fancy-preview-parent-${appPackage.replace(/\./g, '_')}`;
+
+                renderFancyMiniPreview(appPackage, previewBox);
+
+                card.appendChild(previewBox);
+
+                const title = document.createElement('div');
+                title.className = "icon-card-title";
+                title.textContent = appPackage;
+                title.title = appPackage;
+                card.appendChild(title);
+
+                const typeLabel = document.createElement('div');
+                typeLabel.className = "icon-card-type";
+                typeLabel.textContent = "ADAPTIVE (FANCY)";
+                card.appendChild(typeLabel);
+
+                fancyContainer.appendChild(card);
+            });
+        }
+
+        function renderFancyMiniPreview(appPackage, containerElement) {
+            const iconArchive = themeData.nestedZips["icons"];
+            const manifestPath = `fancy_icons/${appPackage}/manifest.xml`;
+            const manifestContent = iconArchive[manifestPath];
+
+            if (!manifestContent) return;
+
+            const imgRegex = /<Image\s+[^>]*src="([^"]+)"[^>]*>/gi;
+            let match;
+            const imagesToDraw = [];
+
+            while ((match = imgRegex.exec(manifestContent)) !== null) {
+                imagesToDraw.push(match[1]);
+            }
+
+            if (imagesToDraw.length === 0) {
+                containerElement.innerHTML = `<span class="material-symbols-outlined" style="font-size:36px; color:var(--text-sub);">widgets</span>`;
+                return;
+            }
+
+            imagesToDraw.forEach(imgName => {
+                const assetPath = `fancy_icons/${appPackage}/${imgName}`;
+                const assetData = iconArchive[assetPath];
+
+                if (assetData) {
+                    const layer = document.createElement('div');
+                    layer.className = "fancy-layer";
+                    
+                    let url = "";
+                    if (assetData instanceof Blob) {
+                        url = URL.createObjectURL(assetData);
+                    } else if (typeof assetData === 'string' && assetData.startsWith('data:image')) {
+                        url = assetData;
+                    }
+                    
+                    if (url) {
+                        layer.style.backgroundImage = `url('${url}')`;
+                        containerElement.appendChild(layer);
+                    }
+                }
+            });
+        }
+
+        function openNormalIconManager(path) {
+            currentDirPath = "icons";
+            openAssetManager(path);
+        }
+
+        function openFancyIconManager(appPackage) {
+            activeFancyAppPackage = appPackage;
+            document.getElementById('fancy-dialog-app-name').textContent = appPackage;
+
+            const canvasPreview = document.getElementById('fancy-live-canvas-preview');
+            canvasPreview.innerHTML = "";
+            renderFancyMiniPreview(appPackage, canvasPreview);
+
+            const iconArchive = themeData.nestedZips["icons"];
+            const manifestPath = `fancy_icons/${appPackage}/manifest.xml`;
+            document.getElementById('fancy-manifest-textarea').value = iconArchive[manifestPath] || "";
+
+            const assetsList = document.getElementById('fancy-assets-editor-list');
+            assetsList.innerHTML = "";
+
+            const prefix = `fancy_icons/${appPackage}/`;
+            for (const path of Object.keys(iconArchive)) {
+                if (path.startsWith(prefix) && !path.endsWith('manifest.xml')) {
+                    const filename = path.replace(prefix, '');
+                    
+                    const row = document.createElement('div');
+                    row.className = "fancy-asset-item";
+
+                    let previewUrl = "";
+                    const rawData = iconArchive[path];
+                    if (rawData instanceof Blob) {
+                        previewUrl = URL.createObjectURL(rawData);
+                    } else if (typeof rawData === 'string' && rawData.startsWith('data:image')) {
+                        previewUrl = rawData;
+                    }
+
+                    row.innerHTML = `
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <img src="${previewUrl}" style="width:32px; height:32px; border-radius:6px; object-fit:contain; background:rgba(0,0,0,0.1);">
+                            <span style="font-weight:600; font-family:monospace;">${filename}</span>
+                        </div>
+                        <div style="display:flex; gap:6px;">
+                            <input type="file" id="replace-fancy-asset-${filename.replace(/\./g, '_')}" style="display:none;" onchange="replaceFancyAssetFile('${path}', this)">
+                            <button class="ai-btn ai-btn-secondary" style="padding:4px 8px; font-size:11px;" onclick="document.getElementById('replace-fancy-asset-${filename.replace(/\./g, '_')}').click()">Replace</button>
+                            <button class="ai-btn ai-btn-danger" style="padding:4px 8px; font-size:11px;" onclick="deleteFancyAssetFile('${path}')">Delete</button>
+                        </div>
+                    `;
+                    assetsList.appendChild(row);
+                }
+            }
+
+            document.getElementById('fancy-detail-dialog').classList.add('active');
+        }
+
+        async function replaceFancyAssetFile(path, inputElement) {
+            if (inputElement.files.length === 0) return;
+            const newFile = inputElement.files[0];
+            const iconArchive = themeData.nestedZips["icons"];
+
+            const shouldResize = document.getElementById('resize-on-replace').checked;
+            const oldFile = iconArchive[path];
+
+            if (shouldResize && oldFile) {
+                try {
+                    const dims = await getImageDimensions(oldFile);
+                    const resized = await resizeImage(newFile, dims.width, dims.height);
+                    iconArchive[path] = resized;
+                } catch(e) {
+                    iconArchive[path] = newFile;
+                }
+            } else {
+                iconArchive[path] = newFile;
+            }
+
+            showToast("Fancy asset layer updated.");
+            openFancyIconManager(activeFancyAppPackage);
+        }
+
+        function deleteFancyAssetFile(path) {
+            if (confirm("Remove this graphical asset element?")) {
+                delete themeData.nestedZips["icons"][path];
+                showToast("Layer deleted.");
+                openFancyIconManager(activeFancyAppPackage);
+            }
+        }
+
+        function triggerAddFancyAsset() {
+            const filename = prompt("Enter the new layer asset filename (e.g. s.png):", "layer.png");
+            if (!filename) return;
+
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = (e) => {
+                if (e.target.files.length > 0) {
+                    const targetPath = `fancy_icons/${activeFancyAppPackage}/${filename}`;
+                    themeData.nestedZips["icons"][targetPath] = e.target.files[0];
+                    showToast("Graphic layer asset appended.");
+                    openFancyIconManager(activeFancyAppPackage);
+                }
+            };
+            input.click();
+        }
+
+        function saveFancyIconChanges() {
+            const newManifest = document.getElementById('fancy-manifest-textarea').value;
+            const manifestPath = `fancy_icons/${activeFancyAppPackage}/manifest.xml`;
+            themeData.nestedZips["icons"][manifestPath] = newManifest;
+
+            closeFancyDetailDialog();
+            parseAndRenderIcons();
+            showToast("Adaptive icon configurations saved.");
+        }
+
+        function closeFancyDetailDialog() {
+            document.getElementById('fancy-detail-dialog').classList.remove('active');
+        }
+
+        function triggerAddIcon(type) {
+            const packageName = prompt("Specify the target app directory bundle ID (e.g. com.android.calculator):");
+            if (!packageName) return;
+
+            const iconArchive = themeData.nestedZips["icons"];
+
+            if (type === 'normal') {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.onchange = (e) => {
+                    if (e.target.files.length > 0) {
+                        const targetPath = `res/drawable-xxhdpi/${packageName}.png`;
+                        iconArchive[targetPath] = e.target.files[0];
+                        parseAndRenderIcons();
+                        showToast("Static app asset created.");
+                    }
+                };
+                input.click();
+            } else {
+                const manifestPath = `fancy_icons/${packageName}/manifest.xml`;
+                const bgPath = `fancy_icons/${packageName}/bg.png`;
+                
+                iconArchive[manifestPath] = `<?xml version="1.0" encoding="utf-8"?>
+<Icon version="1">
+    <Image x="84" y="84" align="center" alignV="center" src="bg.png" />
+</Icon>`;
+                iconArchive[bgPath] = createDummyImage(168, 168, "#3381FF", "NEW");
+                
+                parseAndRenderIcons();
+                showToast("Adaptive structure generated.");
+                openFancyIconManager(packageName);
+            }
+        }
+
+        // --- Custom Image Canvas Generator Helpers ---
+        function createDummyImage(w, h, color, text) {
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = color;
+            ctx.fillRect(0, 0, w, h);
+            
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 16px sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(text, w/2, h/2);
+
+            let dataUrl = canvas.toDataURL('image/png');
+            return dataUrl;
+        }
+
+        function createClockHand(w, h, length, thickness, color) {
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.translate(w/2, h/2);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = thickness;
+            ctx.lineCap = 'round';
+            
+            ctx.beginPath();
+            ctx.moveTo(0, 10); 
+            ctx.lineTo(0, -length); 
+            ctx.stroke();
+
+            return canvas.toDataURL('image/png');
+        }
+
+        // --- EXPORTER MODULE (Assemble Everything Back To .mtz Zip Format) ---
+        async function exportMtzFile() {
+            const loader = document.getElementById('main-loader');
+            const originalView = document.querySelector('.view.active').id;
+            
+            switchView('view-home');
+            loader.style.display = 'flex';
+            document.getElementById('loader-text').textContent = "Assembling resources into exportable .mtz structure...";
+
+            try {
+                const rootZip = new JSZip();
+
+                for (const [archiveName, filesInZip] of Object.entries(themeData.nestedZips)) {
+                    const innerZip = new JSZip();
+                    
+                    for (const [innerPath, innerContent] of Object.entries(filesInZip)) {
+                        if (innerContent instanceof Blob) {
+                            innerZip.file(innerPath, innerContent);
+                        } else if (typeof innerContent === 'string') {
+                            if (innerContent.startsWith('data:image')) {
+                                const blob = dataURItoBlob(innerContent);
+                                innerZip.file(innerPath, blob);
+                            } else {
+                                innerZip.file(innerPath, innerContent);
+                            }
+                        }
+                    }
+
+                    const innerZipBlob = await innerZip.generateAsync({ type: "blob" });
+                    rootZip.file(archiveName, innerZipBlob);
+                }
+
+                for (const [filePath, content] of Object.entries(themeData.files)) {
+                    if (content === "#keep") continue; 
+                    
+                    if (content instanceof Blob) {
+                        rootZip.file(filePath, content);
+                    } else if (typeof content === 'string') {
+                        if (content.startsWith('data:image')) {
+                            const blob = dataURItoBlob(content);
+                            rootZip.file(filePath, blob);
+                        } else {
+                            rootZip.file(filePath, content);
+                        }
+                    }
+                }
+
+                const mtzBlob = await rootZip.generateAsync({ type: "blob" });
+                
+                const downloadUrl = URL.createObjectURL(mtzBlob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                
+                const safeName = themeData.description.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                a.download = `${safeName}.mtz`;
+                
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+                showToast("Your .mtz theme was compiled successfully!");
+            } catch (err) {
+                console.error(err);
+                showToast("A compiler packaging error occurred.");
+            } finally {
+                loader.style.display = 'none';
+                switchView(originalView);
+            }
+        }
+
+        function dataURItoBlob(dataURI) {
+            const byteString = atob(dataURI.split(',')[1]);
+            const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+            const ab = new ArrayBuffer(byteString.length);
+            const ia = new Uint8Array(ab);
+            for (let i = 0; i < byteString.length; i++) {
+                ia[i] = byteString.charCodeAt(i);
+            }
+            return new Blob([ab], {type: mimeString});
+        }
+    </script>
+</body>
+</html>
